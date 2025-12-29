@@ -183,7 +183,7 @@ function getSelectedRole(form) {
     return picked ? String(picked.value) : 'employee';
 }
 
-async function login({ role, user, pin }) {
+async function  login({ role, user, pin }) {
     const isHR = role === 'hr';
     const endpoint = isHR ? '/auth/hr/login' : '/auth/employee/login';
     const payload = isHR ? { name: user, pin } : { email: user, pin };

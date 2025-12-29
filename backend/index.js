@@ -317,9 +317,12 @@ app.post('/auth/employee/register', async (req, res) => {
 
 app.post('/auth/employee/login', async (req, res) => {
   try {
-    const id = Number(req.body?.id);
+    // Accept both the current contract ({ id, pin }) and a legacy contract ({ email, pin })
+    // where `email` may actually contain an ID string.
+    const rawId = (req.body && (req.body.id ?? req.body.email)) ?? '';
+    const id = Number.parseInt(String(rawId).trim(), 10);
     const pin = String(req.body?.pin || '').trim();
-    if (!id || !pin) return res.status(400).json({ error: 'Missing credentials' });
+    if (!Number.isFinite(id) || id <= 0 || !pin) return res.status(400).json({ error: 'Missing credentials' });
     const emp = await dbGet('SELECT id, name, pin_salt, pin_hash FROM employees WHERE id = ?', [id]);
     if (!emp) return res.status(401).json({ error: 'Invalid credentials' });
     const chk = pbkdf2Hash(pin, emp.pin_salt);

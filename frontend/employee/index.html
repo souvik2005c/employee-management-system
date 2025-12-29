@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Management System</title>
+    <meta name="description" content="Employee Management System with HR login, employee login, tasks, live hours tracking, and analytics.">
+    <meta property="og:title" content="Employee Management System">
+    <meta property="og:description" content="Manage employees, tasks, live hours, and analytics in one place.">
+    <meta property="og:type" content="website">
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <script>
+        (function () {
+            try {
+                var params = new URLSearchParams(window.location.search || "");
+                // Default behavior: open Furrow landing as the main page.
+                // Enter app only when explicitly requested:
+                // - `?app=1` is present, OR
+                // - login redirect included `#auth=...`, OR
+                // - a stored token exists (returning users/bookmarks)
+                var hasAppParam = params.get("app") === "1";
+                var hasAuthHash = String(window.location.hash || "").indexOf("#auth=") === 0;
+                var hasStoredToken = false;
+                try {
+                    hasStoredToken = !!(localStorage.getItem('hrToken') || localStorage.getItem('employeeToken'));
+                } catch (e2) {
+                    hasStoredToken = false;
+                }
+
+                var isApp = !!(hasAppParam || hasAuthHash || hasStoredToken);
+                window.__EMS_APP_MODE__ = isApp;
+
+                // If we are NOT in app-mode, redirect to the Furrow landing page.
+                // This makes sharing a single URL (port/IP/devtunnel) simpler on mobile.
+                if (!isApp) {
+                    try {
+                        // IMPORTANT: build the target URL from the *directory* that contains
+                        // this page. This works whether the current URL is:
+                        // - .../frontend/employee/
+                        // - .../frontend/employee/index.html
+                        // - .../ui/
+                        // - .../ui/index.html
+                        var currentUrl = new URL(String(window.location.href || ''));
+                        var baseUrl = new URL('./', currentUrl);
+                        var target = new URL('furrow-index.html', baseUrl);
+                        // Preserve search/hash in case you pass tracking params.
+                        target.search = window.location.search || '';
+                        target.hash = window.location.hash || '';
+                        window.location.replace(target.toString());
+                        return;
+                    } catch (eRedirect) {
+                        // ignore
+                    }
+                }
+
+                var root = document.documentElement;
+                if (root) {
+                    root.classList.add(isApp ? 'ems-app' : 'ems-landing');
+                }
+            } catch (e) {
+                // If something fails (very old browser), do nothing.
+            }
+        })();
+    </script>
+    <style>
+        html.ems-landing, html.ems-landing body { height: 100%; }
+        html.ems-landing body { overflow: hidden; margin: 0; padding: 0; }
+
+        #emsLanding {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2147483647;
+        }
+
+        #emsLandingFrame {
+            width: 100%;
+            height: 100%;
+            border: 0;
+            display: block;
+            background: transparent;
+        }
+
+        html.ems-app #emsLanding { display: none; }
+        html.ems-landing #emsApp { display: none; }
+    </style>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+	<div id="emsLanding" aria-label="Landing page">
+		<iframe id="emsLandingFrame" title="Landing" src="furrow-index.html"></iframe>
+	</div>
+	<div id="emsApp">
+	<div class="theme-toggle">
+        <input id="themeToggle" type="checkbox" class="theme-switch switch" aria-label="Toggle dark mode">
+	</div>
+    <div class="container"> 
+        <div class="header">
+            <div class="header-content">
+                <h1>Employee Management System</h1>
+                <p class="subtitle">Complete HR management with profiles, live hours tracking, and task delegation</p>
+            </div>
+            <div class="header-actions">
+                <div class="auth-controls" aria-label="Login controls">
+                    <span id="authStatus" class="pill" aria-live="polite">Not logged in</span>
+                    <button id="employeeLoginBtn" type="button" class="btn btn-outline">Operations Login</button>
+                    <button id="hrLoginBtn" type="button" class="btn btn-outline">Human Resources (HR) Login</button>
+                    <button id="logoutBtn" type="button" class="btn btn-outline">Logout</button>
+                </div>
+                <button id="employerProfileBtn" class="btn btn-outline">Employer / Management</button>
+                <button id="addEmployeeBtn" class="btn btn-primary btn-lg">Add New Employee</button>
+                <button id="refreshBtn" class="btn btn-secondary">Refresh</button>
+            </div>
+        </div>
+
+        <div class="features-bar">
+            <div class="feature-item" id="featureHours" data-section="tasks" data-focus="hours" role="button" tabindex="0" aria-label="Open Live Hours Tracking">
+                <span class="feature-icon">⏱️</span>
+                <span class="feature-text">Live Hours Tracking</span>
+            </div>
+            <div class="feature-item" id="featureTasks" data-section="tasks" data-focus="tasks" role="button" tabindex="0" aria-label="Open Task Management">
+                <span class="feature-icon">✅</span>
+                <span class="feature-text">Task Management</span>
+            </div>
+            <div class="feature-item" id="featureAnalytics" data-section="analytics" role="button" tabindex="0" aria-label="Open Analytics">
+                <span class="feature-icon">📊</span>
+                <span class="feature-text">Real-time Analytics</span>
+            </div>
+        </div>
+
+        <div id="formPanel" class="form-section hidden">
+            <div class="form-header">
+                <div>
+                    <h2 id="formTitle">Add New Employee</h2>
+                    <p class="form-subtitle">Fill in the details below to add a new team member</p>
+                </div>
+                <button type="button" id="cancelBtn" class="btn btn-icon">✕</button>
+            </div>
+            <form id="employeeForm" class="form-grid">
+                <input type="hidden" id="employeeId">
+                <div class="form-group">
+                    <label for="name">Full Name *</label>
+                    <input type="text" id="name" placeholder="John Doe" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email Address *</label>
+                    <input type="email" id="email" placeholder="john@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="position">Position *</label>
+                    <input type="text" id="position" placeholder="Senior Developer" required>
+                </div>
+                <div class="form-group">
+                    <label for="department">Department (Operations / Finance / IT Support) *</label>
+                    <input type="text" id="department" placeholder="Engineering" required>
+                </div>
+                <div class="form-group">
+                    <label for="salary">Annual Salary *</label>
+                    <input type="number" id="salary" placeholder="50000" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" id="submitBtn" class="btn btn-primary btn-block">Save Employee</button>
+                    <button type="button" id="resetBtn" class="btn btn-secondary btn-block">Reset Form</button>
+                    <button type="button" id="cancelBtn2" class="btn btn-outline btn-block">Cancel</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="nav-tabs ems-sidebar" aria-label="Sidebar navigation">
+            <div class="ems-sidebar-brand" aria-label="App brand">
+                <div class="ems-brand-title">Employee Management</div>
+                <div class="ems-brand-subtitle">Dashboard</div>
+            </div>
+            <div class="ems-sidebar-nav">
+                <button class="nav-tab active" data-section="directory">Directory</button>
+                <button class="nav-tab" data-section="tasks">Tasks</button>
+                <button class="nav-tab" data-section="analytics">Analytics</button>
+            </div>
+        </div>
+
+        <!-- Directory Section -->
+        <div id="directory-section" class="section-content">
+        <div class="employees-section">
+            <div class="section-header">
+                <h2>Employee Directory</h2>
+                <p class="hint">Click "View Profile" to view hours, tasks, and details</p>
+            </div>
+            <div id="employeesList" class="employees-grid"></div>
+        </div>
+        </div>
+
+        <!-- My Tasks Section -->
+        <div id="tasks-section" class="section-content hidden">
+            <div class="tasks-manager-section">
+                <div class="section-header">
+                    <h2 id="tasksHeaderTitle">My Tasks & Deadlines</h2>
+                    <p id="tasksHeaderHint" class="hint">Create, track, and complete your tasks. Filter by status and priority.</p>
+                </div>
+
+                <div class="my-hours-box" id="myHoursBox">
+                    <div class="my-hours-header">
+                        <h3>My Working Hours</h3>
+                        <span class="pill" id="my-hours-status">Loading...</span>
+                    </div>
+                    <div class="my-hours-grid">
+                        <div class="my-hours-item"><span class="label">Today:</span> <span id="my-hours-today">--</span></div>
+                        <div class="my-hours-item"><span class="label">This Week:</span> <span id="my-hours-week">--</span></div>
+                        <div class="my-hours-item"><span class="label">Total:</span> <span id="my-hours-total">--</span></div>
+                    </div>
+                    <div class="my-hours-actions">
+                        <button class="start-btn" id="myHoursStartBtn" type="button">Start</button>
+                        <button class="stop-btn" id="myHoursStopBtn" type="button">Stop</button>
+                    </div>
+                </div>
+
+                <div class="task-creation-box" id="weeklyTimesheetBox">
+                    <div class="timesheet-header">
+                        <h3>Weekly Timesheet</h3>
+                        <span class="pill" id="timesheetStatusPill">Login to view</span>
+                    </div>
+                    <div class="main-task-form timesheet-controls">
+                        <div class="form-row">
+                            <input type="date" id="timesheetWeekStart" aria-label="Timesheet week start (Monday)" required>
+                            <button type="button" id="refreshTimesheetBtn" class="btn btn-secondary">Refresh</button>
+                            <button type="button" id="submitTimesheetBtn" class="btn btn-primary">Submit</button>
+                        </div>
+                    </div>
+                    <div class="my-hours-grid timesheet-summary">
+                        <div class="my-hours-item"><span class="label">Total:</span> <span id="timesheetTotal">--</span></div>
+                        <div class="my-hours-item"><span class="label">Open entries:</span> <span id="timesheetOpen">--</span></div>
+                        <div class="my-hours-item"><span class="label">Notes:</span> <span class="muted">Saved per day</span></div>
+                    </div>
+                    <div id="timesheetWeekTable" class="workload-equity">
+                        <div class="muted">Login as Employee to view timesheet.</div>
+                    </div>
+                </div>
+
+                <div class="task-creation-box" id="gamificationBox">
+                    <h3>Streaks & Badges</h3>
+                    <div class="main-task-form box-controls">
+                        <div class="form-row">
+                            <button type="button" id="refreshGamificationBtn" class="btn btn-secondary">Refresh</button>
+                        </div>
+                    </div>
+                    <div id="gamificationPanel" class="muted box-body">Login as Employee to view streaks.</div>
+                </div>
+
+                <div class="task-creation-box">
+                    <h3>Create New Task</h3>
+                    <form id="mainTaskForm" class="main-task-form">
+                        <div class="form-row">
+                            <input type="text" name="title" placeholder="Task title..." required>
+                            <input type="date" name="due_date" aria-label="Task due date" title="Task due date" required>
+                        </div>
+                        <div class="form-row">
+                            <textarea name="description" placeholder="Task description..." rows="2"></textarea>
+                        </div>
+                        <div class="form-row">
+                            <select name="status" aria-label="Task status" title="Task status">
+                                <option value="todo">To Do</option>
+                                <option value="doing">In Progress</option>
+                                <option value="done">Completed</option>
+                            </select>
+                            <select name="priority" aria-label="Task priority" title="Task priority">
+                                <option value="low">Low Priority</option>
+                                <option value="medium" selected>Medium Priority</option>
+                                <option value="high">High Priority</option>
+                            </select>
+                            <button type="submit" class="btn btn-primary">Add Task</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="task-creation-box" id="requestsBox">
+                    <h3>Requests (Leave / WFH / Overtime)</h3>
+                    <form id="requestForm" class="main-task-form">
+                        <div class="form-row">
+                            <select name="type" aria-label="Request type" title="Request type" required>
+                                <option value="leave">Leave</option>
+                                <option value="wfh">Work From Home</option>
+                                <option value="overtime">Overtime</option>
+                            </select>
+                            <input type="date" name="start_date" aria-label="Request start date" title="Request start date" required>
+                            <input type="date" name="end_date" placeholder="End date (optional)">
+                        </div>
+                        <div class="form-row">
+                            <textarea name="reason" placeholder="Reason (optional)" rows="2"></textarea>
+                        </div>
+                        <div class="form-row">
+                            <button type="submit" class="btn btn-primary">Submit Request</button>
+                            <button type="button" id="refreshRequestsBtn" class="btn btn-secondary">Refresh</button>
+                        </div>
+                    </form>
+                    <div id="myRequestsList" class="muted box-body">Login to view requests.</div>
+                </div>
+
+                <div class="task-creation-box" id="announcementsBox">
+                    <h3>Announcements</h3>
+                    <div id="announcementHrControls" class="box-controls">
+                        <form id="announcementForm" class="main-task-form">
+                            <div class="form-row">
+                                <input type="text" id="announcementTitle" placeholder="Title" required>
+                                <input type="date" id="announcementExpires" placeholder="Expires (optional)">
+                            </div>
+                            <div class="form-row">
+                                <textarea id="announcementMessage" placeholder="Message" rows="2" required></textarea>
+                            </div>
+                            <div class="form-row">
+                                <button type="submit" class="btn btn-primary">Post</button>
+                                <button type="button" id="refreshAnnouncementsBtn" class="btn btn-secondary">Refresh</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div id="announcementsList" class="muted box-body">Login to view announcements.</div>
+                </div>
+
+                <div class="task-creation-box" id="myLeaveBox">
+                    <h3>My Approved Leave</h3>
+                    <form id="myLeaveFilterForm" class="main-task-form">
+                        <div class="form-row">
+                            <input type="date" id="myLeaveFrom" aria-label="My leave from" title="My leave from" required>
+                            <input type="date" id="myLeaveTo" aria-label="My leave to" title="My leave to" required>
+                            <button type="button" id="refreshMyLeaveBtn" class="btn btn-secondary">Refresh</button>
+                        </div>
+                    </form>
+                    <div id="myLeaveList" class="muted box-body">Login as Employee to view approved leave.</div>
+                </div>
+
+                <div class="task-creation-box" id="teamLeaveBox">
+                    <h3>Team Leave Calendar</h3>
+                    <form id="teamLeaveFilterForm" class="main-task-form">
+                        <div class="form-row">
+                            <input type="date" id="teamLeaveFrom" aria-label="Team leave from" title="Team leave from" required>
+                            <input type="date" id="teamLeaveTo" aria-label="Team leave to" title="Team leave to" required>
+                            <button type="button" id="refreshTeamLeaveBtn" class="btn btn-secondary">Refresh</button>
+                        </div>
+                    </form>
+                    <div id="teamLeaveList" class="muted box-body">Login to view team leave calendar.</div>
+                </div>
+
+                <div class="tasks-filters">
+                    <button class="filter-btn active" data-filter="all">All Tasks</button>
+                    <button class="filter-btn" data-filter="todo">To Do</button>
+                    <button class="filter-btn" data-filter="doing">In Progress</button>
+                    <button class="filter-btn" data-filter="done">Completed</button>
+                </div>
+
+                <div class="tasks-display">
+                    <div id="mainTasksList" class="main-tasks-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Section -->
+        <div id="analytics-section" class="section-content hidden">
+            <div class="section-header">
+                <h2>Analytics & Reports</h2>
+                <p class="hint">View your work statistics and performance metrics</p>
+            </div>
+
+            <div class="analytics-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">Tasks</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Completed Tasks</div>
+                        <div class="stat-value" id="stat-completed">0</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">Progress</div>
+                    <div class="stat-content">
+                        <div class="stat-label">In Progress</div>
+                        <div class="stat-value" id="stat-doing">0</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">Total</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Total Tasks</div>
+                        <div class="stat-value" id="stat-total">0</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">Hours</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Hours Worked</div>
+                        <div class="stat-value" id="stat-hours">0h</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-section">
+                <div class="chart-card">
+                    <h3>Task Status Distribution</h3>
+                    <div class="chart-placeholder">
+                        <div class="chart-bar">
+                            <div class="chart-row" id="chart-row-todo" data-label="To Do">
+                                <span class="chart-row-label">To Do</span>
+                                <span class="chart-row-value" id="chart-todo">0</span>
+                            </div>
+                            <div class="chart-row" id="chart-row-doing" data-label="In Progress">
+                                <span class="chart-row-label">In Progress</span>
+                                <span class="chart-row-value" id="chart-doing">0</span>
+                            </div>
+                            <div class="chart-row" id="chart-row-done" data-label="Completed">
+                                <span class="chart-row-label">Completed</span>
+                                <span class="chart-row-value" id="chart-done">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>Priority Breakdown</h3>
+                    <div class="chart-placeholder">
+                        <div class="chart-bar">
+                            <div class="chart-row" id="chart-row-high" data-label="High">
+                                <span class="chart-row-label">High</span>
+                                <span class="chart-row-value" id="chart-high">0</span>
+                            </div>
+                            <div class="chart-row" id="chart-row-medium" data-label="Medium">
+                                <span class="chart-row-label">Medium</span>
+                                <span class="chart-row-value" id="chart-medium">0</span>
+                            </div>
+                            <div class="chart-row" id="chart-row-low" data-label="Low">
+                                <span class="chart-row-label">Low</span>
+                                <span class="chart-row-value" id="chart-low">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-card" id="workloadEquityCard">
+                    <h3>Workload Equity (Company)</h3>
+                    <div id="workloadEquity" class="workload-equity">
+                        <div class="muted">Login as HR to view workload equity.</div>
+                    </div>
+                </div>
+
+                <div class="chart-card" id="leaderboardCard">
+                    <h3>Team Leaderboard (HR)</h3>
+                    <div id="leaderboardBox" class="workload-equity">
+                        <div class="muted">Login as HR to view leaderboard.</div>
+                    </div>
+                </div>
+
+                <div class="chart-card" id="attentionCard">
+                    <h3>Attention Needed (HR)</h3>
+                    <div id="attentionBox" class="workload-equity">
+                        <div class="muted">Login as HR to view attention inbox.</div>
+                    </div>
+                </div>
+
+                <div class="chart-card" id="requestsReviewCard">
+                    <h3>Requests Approval (HR)</h3>
+                    <div class="main-task-form box-controls">
+                        <div class="form-row">
+                            <select id="requestsReviewType" aria-label="Filter requests by type">
+                                <option value="">All types</option>
+                                <option value="leave">Leave</option>
+                                <option value="wfh">Work From Home</option>
+                                <option value="overtime">Overtime</option>
+                            </select>
+                            <button type="button" id="refreshRequestsReviewBtn" class="btn btn-secondary">Refresh</button>
+                        </div>
+                    </div>
+                    <div id="requestsReview" class="workload-equity">
+                        <div class="muted">Login as HR to review requests.</div>
+                    </div>
+                </div>
+
+                <div class="chart-card" id="timesheetsReviewCard">
+                    <h3>Timesheets Review & Payroll Export (HR)</h3>
+                    <div class="main-task-form timesheets-review-controls">
+                        <div class="form-row">
+                            <input type="date" id="timesheetsWeekStartHr" aria-label="Week start for timesheets" required>
+                            <select id="timesheetsStatusFilter" aria-label="Filter timesheets by status">
+                                <option value="submitted" selected>Submitted</option>
+                                <option value="approved">Approved</option>
+                                <option value="rejected">Rejected</option>
+                                <option value="draft">Draft</option>
+                            </select>
+                            <button type="button" id="refreshTimesheetsReviewBtn" class="btn btn-secondary">Refresh</button>
+                            <button type="button" id="downloadTimesheetsCsvBtn" class="btn btn-primary">Export CSV</button>
+                        </div>
+                        <div class="muted timesheets-export-hint">Export uses selected week + status (typically Approved).</div>
+                    </div>
+                    <div id="timesheetsReview" class="workload-equity">
+                        <div class="muted">Login as HR to review timesheets.</div>
+                    </div>
+                </div>
+
+                <div class="chart-card" id="leaveCalendarCard">
+                    <h3>Team Leave Calendar (HR)</h3>
+                    <div class="main-task-form box-controls">
+                        <div class="form-row">
+                            <input type="date" id="leaveCalFrom" aria-label="Leave calendar from" title="Leave calendar from" required>
+                            <input type="date" id="leaveCalTo" aria-label="Leave calendar to" title="Leave calendar to" required>
+                            <button type="button" id="refreshLeaveCalendarBtn" class="btn btn-secondary">Refresh</button>
+                        </div>
+                    </div>
+                    <div id="leaveCalendar" class="workload-equity">
+                        <div class="muted">Login as HR to view team leave calendar.</div>
+                    </div>
+                </div>
+
+                <div class="chart-card" id="auditLogCard">
+                    <h3>Audit Log (HR)</h3>
+                    <div id="auditLog" class="workload-equity">
+                        <div class="muted">Login as HR to view audit log.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div id="profileModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="profileTitle">Profile</h2>
+                <button type="button" id="closeModalBtn" class="btn btn-icon">✕</button>
+            </div>
+
+            <div id="profilePanel" class="profile-panel">
+                <!-- Profile details injected here -->
+                <div id="profileDetails"></div>
+
+                <!-- Time Tracker -->
+                <div class="section-title" id="modalHoursTitle">Working Hours</div>
+                <div class="time-tracker" id="modalTimeTracker">
+                    <div class="time-grid">
+                        <div class="time-item"><span class="label">Today:</span> <span id="modal-today">--</span></div>
+                        <div class="time-item"><span class="label">This Week:</span> <span id="modal-week">--</span></div>
+                        <div class="time-item"><span class="label">Total:</span> <span id="modal-total">--</span></div>
+                        <div class="time-item"><span class="label">Status:</span> <span class="pill" id="modal-status">Loading...</span></div>
+                    </div>
+                    <div class="time-actions">
+                        <button class="start-btn" id="modalStartBtn">Start</button>
+                        <button class="stop-btn" id="modalStopBtn">Stop</button>
+                    </div>
+                </div>
+
+                <!-- Task Manager -->
+                <div class="section-title" id="modalTasksTitle">Tasks</div>
+                <div class="task-manager" id="modalTaskManager">
+                    <div class="task-tabs">
+                        <button class="task-tab active" data-tab="all">All Tasks</button>
+                        <button class="task-tab" data-tab="assigned">Team Lead Tasks</button>
+                        <button class="task-tab" data-tab="personal">My Tasks</button>
+                    </div>
+                    
+                    <div class="task-tab-content">
+                        <form class="task-form" id="modalTaskForm">
+                            <input type="text" name="title" placeholder="New task title" aria-label="Task title" required>
+                            <select name="status" aria-label="Task status">
+                                <option value="todo">To do</option>
+                                <option value="doing">Doing</option>
+                                <option value="done">Done</option>
+                            </select>
+                            <select name="priority" aria-label="Task priority">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                            </select>
+                            <input type="date" name="due_date" aria-label="Task due date">
+                            <button type="submit">Add Task</button>
+                        </form>
+                        <div class="task-list" id="modal-task-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="site-footer" aria-label="Site footer">
+			<div>© <span id="yearNow"></span> Employee Management System</div>
+			<div class="site-footer-links">
+				<a href="privacy.html">Privacy</a>
+				<span aria-hidden="true">•</span>
+				<a href="terms.html">Terms</a>
+			</div>
+    </footer>
+
+    <script src="script.js"></script>
+	<script>
+		(function(){
+			var y = document.getElementById('yearNow');
+			if (y) y.textContent = String(new Date().getFullYear());
+		})();
+	</script>
+    </div>
+
+    <script>
+        // Only load the EMS app logic when entering the app.
+        (function () {
+            try {
+                if (!window.__EMS_APP_MODE__) return;
+                var s = document.createElement('script');
+                s.src = 'script.js';
+                s.defer = true;
+                document.body.appendChild(s);
+            } catch (e) {
+                // As a fallback, do nothing.
+            }
+        })();
+    </script>
+</body>
+</html>

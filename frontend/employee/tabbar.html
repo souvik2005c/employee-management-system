@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Quick Actions</title>
+	<link rel="stylesheet" href="./tabbar.css">
+</head>
+<body>
+
+<nav class="menu" aria-label="Open the EMS app">
+	<input type="radio" name="nav-item" id="m-home" checked>
+	<label for="m-home" data-action="employee-login">Employee</label>
+
+	<input type="radio" name="nav-item" id="m-search">
+	<label for="m-search" data-action="hr-login">HR</label>
+
+	<input type="radio" name="nav-item" id="m-notification">
+	<label for="m-notification" data-action="add-employee">Add</label>
+
+	<input type="radio" name="nav-item" id="m-favorites">
+	<label for="m-favorites" data-action="logout">Logout</label>
+
+	<input type="radio" name="nav-item" id="m-profile">
+	<label for="m-profile" data-action="open-app">Open</label>
+
+	<div class="selector" aria-hidden="true"></div>
+</nav>
+
+<script>
+	(function () {
+		var menu = document.querySelector('nav.menu');
+		if (!menu) return;
+
+		menu.addEventListener('change', function (e) {
+			var target = e.target;
+			if (!target || target.tagName !== 'INPUT') return;
+
+			var label = menu.querySelector('label[for="' + target.id + '"]');
+			var action = label ? label.getAttribute('data-action') : null;
+
+			var base = './index.html?app=1';
+			if (!action || action === 'open-app') {
+				window.location.href = base;
+				return;
+			}
+
+			window.location.href = base + '&action=' + encodeURIComponent(action);
+		});
+	})();
+</script>
+
+</body>
+</html>

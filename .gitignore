@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Local databases
+backend/employee.db
+*.sqlite
+*.sqlite3
+*.db
+
+# Environment variables
+.env
+.env.*
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Build outputs
+/dist
+/build
+
+# Root-level lockfile (this repo has per-folder package-locks)
+/package-lock.json

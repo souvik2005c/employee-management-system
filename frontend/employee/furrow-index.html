@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta name="description" content="Employee Management System with HR login, employee login, tasks, live hours tracking, and analytics.">
+		<meta property="og:title" content="Employee Management System">
+		<meta property="og:description" content="Manage employees, tasks, live hours, and analytics in one place.">
+		<meta property="og:type" content="website">
+		<link rel="preload" href="./design-furrow/assets/fonts/Presicav.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+		<link rel="preload" href="./design-furrow/assets/fonts/Calibre-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+		<link rel="preload" href="./design-furrow/assets/fonts/Calibre-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+		<link rel="preload" href="./design-furrow/assets/fonts/Calibre-Black.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+		<link rel="preload" href="./design-furrow/assets/fonts/Arial.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+		<link rel="icon" type="image/svg+xml" href="./assets/favicon.svg">
+		<title>Employee Management System</title>
+		<script type="module" crossorigin="" src="./design-furrow/js/dev/index.js"></script>
+		<link rel="stylesheet" crossorigin="" href="./design-furrow/css/index.min.css?v=1754734869502">
+		<style>
+			html, body {
+				height: 100%;
+				margin: 0;
+			}
+			body {
+				overflow-x: hidden;
+			}
+
+			/* Theme toggle (top-right corner) */
+			.theme-toggle {
+				position: fixed;
+				top: 16px;
+				right: 16px;
+				z-index: 1000000;
+			}
+
+			.theme-switch {
+				position: relative;
+				width: 130px;
+				height: 50px;
+				margin: 0;
+				-webkit-appearance: none;
+				appearance: none;
+				border-radius: 25px;
+				outline: none;
+				cursor: pointer;
+				overflow: hidden;
+				background-image: url('./assets/theme-light.png?v=20251227b');
+				background-size: cover;
+				background-repeat: no-repeat;
+				transition: background-image .7s ease-in-out;
+				border: 1px solid rgba(0, 0, 0, 0.2);
+				box-shadow: inset 0px 0px 2px rgba(255, 255, 255, .7);
+			}
+
+			.theme-switch:checked {
+				background-image: url('./assets/theme-dark.png?v=20251227b');
+			}
+
+			.theme-switch:after {
+				content: '';
+				width: 46px;
+				height: 46px;
+				border-radius: 50%;
+				background-color: #fff;
+				position: absolute;
+				left: 2px;
+				top: 2px;
+				transform: translateX(0px);
+				animation: themeOff .7s forwards cubic-bezier(.8, .5, .2, 1.4);
+				box-shadow: inset 5px -5px 4px rgba(53, 53, 53, 0.3);
+			}
+
+			.theme-switch:checked:after {
+				animation: themeOn .7s forwards cubic-bezier(.8, .5, .2, 1.4);
+				box-shadow: inset -5px -5px 4px rgba(53, 53, 53, 0.3);
+			}
+
+			.theme-switch:before {
+				content: '';
+				width: 15px;
+				height: 15px;
+				border-radius: 50%;
+				position: absolute;
+				left: 15px;
+				top: 5px;
+				filter: blur(1px);
+				background-color: #f5daaa;
+				box-shadow: 0px 0px 10px #f5deb4,
+					0px 0px 20px #f5deb4,
+					0px 0px 30px #f5deb4,
+					inset 0px 0px 2px #efd3a3;
+				transform-origin: 53px 10px;
+				animation: themeMoon .7s forwards ease;
+			}
+
+			.theme-switch:checked:before {
+				background-color: transparent;
+				box-shadow: 5px -1px 0px #fff;
+				filter: blur(0px);
+				animation: themeSun .7s forwards ease;
+			}
+
+			@keyframes themeOff {
+				0% { transform: translateX(80px); width: 46px; }
+				50% { width: 75px; border-radius: 25px; }
+				100% { transform: translateX(0px); width: 46px; }
+			}
+
+			@keyframes themeOn {
+				0% { transform: translateX(0px); width: 46px; }
+				50% { width: 75px; border-radius: 25px; }
+				100% { transform: translateX(80px); width: 46px; }
+			}
+
+			@keyframes themeMoon {
+				0% { transform: rotate(0deg); }
+				100% { transform: rotate(-180deg); }
+			}
+
+			@keyframes themeSun {
+				0% { transform: rotate(-180deg); }
+				100% { transform: rotate(0deg); }
+			}
+
+			/* Furrow dark mode: invert-based (fast + works with minified CSS) */
+			body.dark-mode {
+				filter: invert(1) hue-rotate(180deg);
+				background: #0b1220;
+			}
+
+			/* Revert media so videos/images don't look inverted */
+			body.dark-mode img,
+			body.dark-mode video,
+			body.dark-mode canvas {
+				filter: invert(1) hue-rotate(180deg);
+			}
+
+			/* Keep the toggle itself looking normal in dark mode */
+			body.dark-mode .theme-toggle {
+				filter: invert(1) hue-rotate(180deg);
+			}
+
+			/* Enable custom cursor on touch devices (Furrow CSS hides it via any-hover:none). */
+			@media (any-hover: none) {
+				.custom-cursor {
+					display: block !important;
+					opacity: 0;
+				}
+			}
+
+			/* Make cursor movement feel immediate (avoid trailing lag). */
+			.custom-cursor {
+				transition: transform .02s linear, width .16s ease, height .16s ease, background .16s ease, border-color .16s ease, opacity .16s linear;
+				will-change: transform;
+			}
+
+			/* Minimal contact form styling (keeps Furrow look) */
+			.contact-form {
+				margin-top: 24px;
+				display: grid;
+				gap: 12px;
+				max-width: 560px;
+			}
+			.contact-form input,
+			.contact-form textarea {
+				width: 100%;
+				padding: 12px 14px;
+				border: 1px solid rgba(0, 0, 0, 0.25);
+				border-radius: 12px;
+				background: #fff;
+				color: #000;
+				font: inherit;
+			}
+			.contact-form textarea { min-height: 120px; resize: vertical; }
+			.contact-form button {
+				appearance: none;
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				min-height: 44px;
+				padding: 12px 18px;
+				border-radius: 999px;
+				border: 1px solid rgba(234, 40, 30, 0.65);
+				background: #EA281E;
+				color: #fff;
+				font: inherit;
+				font-weight: 600;
+				letter-spacing: 0.04em;
+				cursor: pointer;
+				transition: background-color .18s ease, border-color .18s ease, transform .06s ease, box-shadow .18s ease;
+				box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
+			}
+			.contact-form button:hover {
+				background: #c71f18;
+				border-color: rgba(199, 31, 24, 0.75);
+				box-shadow: 0 12px 26px rgba(0, 0, 0, 0.16);
+			}
+			.contact-form button:active {
+				transform: translateY(1px);
+			}
+			.contact-form button:disabled {
+				opacity: 0.55;
+				cursor: not-allowed;
+				box-shadow: none;
+			}
+			.contact-form button:focus-visible,
+			.contact-form input:focus-visible,
+			.contact-form textarea:focus-visible {
+				outline: 3px solid rgba(0, 0, 0, 0.35);
+				outline-offset: 2px;
+			}
+			.contact-status { margin-top: 8px; font-size: 14px; opacity: 0.8; }
+
+			.footer__legal {
+				margin-top: 12px;
+				font-size: 14px;
+				opacity: 0.85;
+			}
+			.footer__legal a { text-decoration: underline; }
+
+			.contact-title { margin: 0 0 10px; }
+			.contact-intro { margin: 0; }
+		</style>
+		<script src="./theme-toggle.js" defer></script>
+		<script src="./contact.js" defer></script>
+	</head>
+	<body>
+		<div class="wrapper">
+			<div class="theme-toggle">
+				<input id="themeToggle" type="checkbox" class="theme-switch switch" aria-label="Toggle dark mode">
+			</div>
+			<header class="header fade" data-fls-header="" data-fls-header-scroll="" data-fls-header-scroll-show="">
+				<div class="header__container">
+					<div class="header__menu menu">
+						<svg class="menu__logo" xmlns="http://www.w3.org/2000/svg" viewbox="0 0 131 23" fill="#000">
+							<path d="M0 .158v22.399h5.695V14.64h8.992V9.68H5.695V5.23h9.78V.158z"></path>
+							<path d="M18.117 13.4V.159h5.732V12.89c0 3.173 1.47 4.815 3.869 4.815 2.365 0 3.833-1.642 3.833-4.815V.158h5.732v13.279c0 6.128-3.761 9.484-9.565 9.484-5.803 0-9.6-3.356-9.6-9.52"></path>
+							<path d="M45.858 10.482h3.582c2.042 0 2.973-1.058 2.973-2.7 0-1.641-.931-2.699-2.973-2.699h-3.582v5.4zm0 4.67v7.405h-5.696V.158h9.887c4.729 0 7.989 2.737 7.989 7.625 0 3.392-1.684 5.727-4.371 6.748l5.158 8.026h-6.376l-4.585-7.405h-2.006z"></path>
+							<path d="M66.366 10.482h3.582c2.042 0 2.973-1.058 2.973-2.7 0-1.641-.931-2.699-2.973-2.699h-3.582v5.4zm0 4.67v7.405H60.67V.158h9.887c4.729 0 7.989 2.737 7.989 7.625 0 3.392-1.684 5.727-4.371 6.748l5.158 8.026h-6.376l-4.584-7.405h-2.007z"></path>
+							<path d="M118.682.158l3.366 13.17 3.046-13.17h5.802l-5.802 22.399h-5.267l-3.403-13.133-3.439 13.133h-5.266L101.952.158h5.875l3.082 13.17 3.402-13.17z"></path>
+							<path d="M98.045 11.358c0 4.162-3.313 7.536-7.4 7.536-4.088 0-7.4-3.374-7.4-7.536 0-4.162 3.312-7.536 7.4-7.536 4.087 0 7.4 3.374 7.4 7.536" fill="#EA281E"></path>
+						</svg>
+						<div class="menu__icon-wrapper icon-wrapper icon-wrapper--open">
+							<button type="button" data-fls-menu="" class="menu__icon icon-menu icon-menu--open sticky-item" aria-label="Open menu"></button>
+							<span>Projects</span>
+						</div>
+						<nav class="menu__body" aria-label="Main menu">
+							<div class="menu__container">
+								<div class="menu__top-action top-action">
+									<div class="top-action__lable">Projects</div>
+									<div class="top-action__icon-wrapper icon-wrapper icon-wrapper--close">
+										<button type="button" data-fls-menu="" class="top-action__icon icon-menu icon-menu--closed sticky-item" aria-label="Close menu"></button>
+										<span>Close</span>
+									</div>
+								</div>
+								<ul class="menu__list">
+									<li class="menu__item">
+										<a href="./login.html?role=employee" class="menu__link --icon-arrow" data-video="./design-furrow/files/easy.mp4">Employee Login</a>
+									</li>
+									<li class="menu__item">
+										<a href="./login.html?role=hr" class="menu__link --icon-arrow" data-video="./design-furrow/files/50-beaches.mp4">HR Login</a>
+									</li>
+									<li class="menu__item">
+										<a href="./login.html?role=hr&next=employer" class="menu__link --icon-arrow" data-video="./design-furrow/files/featured-video.mp4">Employer Profile</a>
+									</li>
+									<li class="menu__item">
+										<a href="./index.html?app=1#tasks" class="menu__link --icon-arrow" data-video="./design-furrow/files/make-it-zero.mp4">Department (Operations/Finance/IT Support)</a>
+									</li>
+									<li class="menu__item">
+										<a href="./index.html?app=1#analytics" class="menu__link --icon-arrow" data-video="./design-furrow/files/50-beaches.mp4">Analytics</a>
+									</li>
+								</ul>
+								<div class="menu__video-wrapper" id="videoWrapper">
+									<video class="menu__video" id="video" src="./design-furrow/files/easy.mp4" autoplay muted loop playsinline="" preload="auto"></video>
+								</div>
+								<div class="menu__bottom-action bottom-action">
+									<address class="bottom-action__contact" itemscope itemtype="http://schema.org/Organization">
+										<a href="mailto:info@furrow.studio" class="bottom-action__email" itemprop="email">info@furrow.studio</a>
+										<a href="tel:+19024170634" class="bottom-action__phone" itemprop="telephone">+1.902.417.0634</a>
+										<span class="bottom-action__copyright">© Furrow 2025</span>
+									</address>
+									<ul class="bottom-action__social-list">
+										<li class="bottom-action__social-item sticky-item">
+											<a href="#" class="bottom-action__social-link --icon-instagram" aria-label="Instagram">
+												<span class="visually-hidden">Instagram</span>
+											</a>
+										</li>
+										<li class="bottom-action__social-item sticky-item">
+											<a href="#" class="bottom-action__social-link --icon-facebook" aria-label="Facebook">
+												<span class="visually-hidden">Facebook</span>
+											</a>
+										</li>
+										<li class="bottom-action__social-item sticky-item">
+											<a href="#" class="bottom-action__social-link --icon-dribbble" aria-label="Dribbble">
+												<span class="visually-hidden">Dribbble</span>
+											</a>
+										</li>
+									</ul>
+								</div>
+							</div>
+						</nav>
+					</div>
+				</div>
+			</header>
+			<div class="custom-cursor" id="custom-cursor"></div>
+			<main class="page page--home">
+				<section class="hero">
+					<video class="hero__video" src="./design-furrow/files/easy.mp4" autoplay muted loop playsinline=""></video>
+					<canvas class="hero__canvas" id="hero-canvas"></canvas>
+					<h1 class="hero__title" data-fls-watcher="" data-fls-watcher-once="">
+						<span>DIG</span>
+						<span>DEEP</span>
+					</h1>
+				</section>
+				<section class="story">
+					<div class="story__container">
+						<div class="story__text" data-fls-watcher="" data-fls-watcher-once="">
+							<p>
+								Great stories don’t just happen— they need to be uncovered.
+							</p>
+						</div>
+						<div class="story__featured">
+							<a class="story__featured-wrapper" href="#" data-fls-watcher="" data-fls-watcher-once="">
+								<video class="story__video" src="./design-furrow/files/50-beaches.mp4" autoplay muted loop playsinline=""></video>
+								<div class="story__featured-content">
+									<div class="story__label">Featured</div>
+									<div class="story__meta">
+										<span class="story__client">Employee Management</span>
+										<span class="story__year">2025</span>
+									</div>
+								</div>
+								<h2 class="story__title --icon-rt-arrow">
+									Manage
+									<span>Teams</span>
+								</h2>
+							</a>
+						</div>
+					</div>
+				</section>
+
+				<section class="studio">
+					<div class="studio__container">
+						<div class="studio__description">
+							<h2 class="studio__title" data-fls-watcher="" data-fls-watcher-once="">
+								A simple, modern Employee Management System.
+							</h2>
+							<p class="studio__text" data-fls-watcher="" data-fls-watcher-once="">
+								Log in as Employee or HR to manage profiles, tasks, live hours, and analytics.
+							</p>
+						</div>
+						<div class="studio__services services">
+							<div class="services__label" data-fls-watcher="" data-fls-watcher-once="">Quick Links</div>
+							<div class="services__spollers spollers" data-fls-spollers="" data-fls-spollers-one="" data-fls-watcher="" data-fls-watcher-once="">
+								<details class="spollers__item">
+									<summary class="spollers__title">Login</summary>
+									<div class="spollers__body">
+										<ul>
+											<li><a href="./login.html?role=employee">Employee Login</a></li>
+											<li><a href="./login.html?role=hr">HR Login</a></li>
+										</ul>
+									</div>
+								</details>
+								<details class="spollers__item">
+									<summary class="spollers__title">Open App</summary>
+									<div class="spollers__body">
+										<ul>
+											<li><a href="./index.html?app=1#directory">Directory</a></li>
+											<li><a href="./index.html?app=1#tasks">My Tasks</a></li>
+											<li><a href="./index.html?app=1#analytics">Analytics</a></li>
+										</ul>
+									</div>
+								</details>
+							</div>
+						</div>
+					</div>
+				</section>
+
+				<section class="story" id="contact">
+					<div class="story__container">
+						<div class="story__text" data-fls-watcher="" data-fls-watcher-once="">
+							<h2 class="contact-title">Contact</h2>
+							<p class="contact-intro">Send an inquiry and we’ll respond as soon as possible.</p>
+							<form id="contactForm" class="contact-form" aria-label="Contact form">
+								<input name="name" type="text" placeholder="Your name" autocomplete="name" aria-label="Your name">
+								<input name="email" type="email" placeholder="Your email" autocomplete="email" aria-label="Your email">
+								<textarea name="message" placeholder="Your message" aria-label="Your message" required></textarea>
+								<button type="submit">Send message</button>
+								<div id="contactStatus" class="contact-status" aria-live="polite"></div>
+							</form>
+						</div>
+					</div>
+				</section>
+			</main>
+			<footer class="footer" data-fls-footer="">
+				<div class="footer__container">
+					<div class="footer__col">
+						<div class="footer__contacts contacts" data-fls-watcher="" data-fls-watcher-once="">
+							<a class="contacts__phone" href="tel:+19024170634">+1.902.417.0634</a>
+							<a class="contacts__email" href="mailto:info@furrow.studio">info@furrow.studio</a>
+							<div class="footer__legal">
+								<a href="./privacy.html">Privacy</a> · <a href="./terms.html">Terms</a>
+							</div>
+						</div>
+					</div>
+					<div class="footer__col">
+						<address class="footer__address address" data-fls-watcher="" data-fls-watcher-once="">
+							<span class="address__line">15 Camburhill Ct Unit C</span>
+							<span class="address__line">Charlottetown, PE C1E 0E2</span>
+						</address>
+					</div>
+					<div class="footer__col">
+						<ul class="footer__socials socials" aria-label="Social Media Links" data-fls-watcher="" data-fls-watcher-once="">
+							<li class="socials__item">
+								<a class="socials__link --icon-instagram sticky-item" href="#" aria-label="Instagram">
+									<span class="visually-hidden">Instagram</span>
+								</a>
+							</li>
+							<li class="socials__item">
+								<a class="socials__link --icon-facebook sticky-item" href="#" aria-label="Facebook">
+									<span class="visually-hidden">Facebook</span>
+								</a>
+							</li>
+							<li class="socials__item">
+								<a class="socials__link --icon-dribbble sticky-item" href="#" aria-label="Dribbble">
+									<span class="visually-hidden">Dribbble</span>
+								</a>
+							</li>
+						</ul>
+					</div>
+				</div>
+			</footer>
+		</div>
+		<script>
+			(function () {
+				var MENU_VIDEO_FALLBACK = './design-furrow/files/easy.mp4';
+
+				function resolveUrl(href) {
+					try {
+						return new URL(href, window.location.href).toString();
+					} catch (e) {
+						return href;
+					}
+				}
+
+				function navigateTop(url) {
+					try {
+						if (window.top && window.top !== window) {
+							window.top.location.href = url;
+							return;
+						}
+					} catch (e) {
+						// Cross-origin or restricted; fall back.
+					}
+					window.location.href = url;
+				}
+
+				function initProjectsMenuPreviewVideo() {
+					var video = document.getElementById('video');
+					if (!video) return;
+					var links = document.querySelectorAll('.menu__link[data-video]');
+					if (!links || !links.length) return;
+
+					var isHandlingError = false;
+					try {
+						video.addEventListener('error', function () {
+							if (isHandlingError) return;
+							isHandlingError = true;
+							try {
+								var current = String(video.currentSrc || video.src || video.getAttribute('src') || '');
+								if (current.indexOf('easy.mp4') === -1) {
+									setPreview(MENU_VIDEO_FALLBACK);
+								}
+							} catch (e) {
+								// ignore
+							}
+							isHandlingError = false;
+						});
+					} catch (e) {
+						// ignore
+					}
+
+					function setPreview(src) {
+						if (!src) return;
+						try {
+							var abs;
+							try {
+								abs = new URL(src, window.location.href).toString();
+							} catch (eAbs) {
+								abs = src;
+							}
+							var currentAbs = String(video.currentSrc || video.src || video.getAttribute('src') || '');
+							if (currentAbs === abs) return;
+
+							try { video.pause(); } catch (ePause) { /* ignore */ }
+							video.muted = true;
+							video.autoplay = true;
+							video.loop = true;
+							video.setAttribute('playsinline', '');
+							video.src = src;
+							if (typeof video.load === 'function') video.load();
+							var p = video.play();
+							if (p && typeof p.catch === 'function') p.catch(function () { /* autoplay can be blocked */ });
+						} catch (e) {
+							// ignore
+						}
+					}
+
+					// Default preview
+					setPreview(links[0].getAttribute('data-video') || MENU_VIDEO_FALLBACK);
+
+					for (var i = 0; i < links.length; i++) {
+						(function (link) {
+							link.addEventListener('mouseenter', function () { setPreview(link.getAttribute('data-video')); });
+							link.addEventListener('focus', function () { setPreview(link.getAttribute('data-video')); });
+							link.addEventListener('touchstart', function () { setPreview(link.getAttribute('data-video')); }, { passive: true });
+						})(links[i]);
+					}
+				}
+
+				initProjectsMenuPreviewVideo();
+
+				// Some browsers (especially mobile, or when embedded/served via tunnels)
+				// block autoplay until the first user gesture. Force-play all muted videos
+				// on load, and retry once on first interaction.
+				function kickAutoplayAllVideos() {
+					try {
+						var vids = document.querySelectorAll('video');
+						if (!vids || !vids.length) return;
+						for (var i = 0; i < vids.length; i++) {
+							var v = vids[i];
+							if (!v) continue;
+							try {
+								// Ensure autoplay prerequisites.
+								v.muted = true;
+								v.autoplay = true;
+								v.loop = true;
+								v.setAttribute('muted', '');
+								v.setAttribute('playsinline', '');
+								v.setAttribute('webkit-playsinline', '');
+								var p = v.play();
+								if (p && typeof p.catch === 'function') p.catch(function () { /* ignore */ });
+							} catch (e2) {
+								// ignore
+							}
+						}
+					} catch (e) {
+						// ignore
+					}
+				}
+
+				// Try immediately and once DOM is ready.
+				try { kickAutoplayAllVideos(); } catch (e) {}
+				document.addEventListener('DOMContentLoaded', function () {
+					kickAutoplayAllVideos();
+				});
+
+				// Retry on first user gesture.
+				var kickedOnce = false;
+				function kickOnce() {
+					if (kickedOnce) return;
+					kickedOnce = true;
+					kickAutoplayAllVideos();
+				}
+				document.addEventListener('pointerdown', kickOnce, { passive: true, once: true });
+				document.addEventListener('touchstart', kickOnce, { passive: true, once: true });
+
+				document.addEventListener('click', function (e) {
+					var target = e.target;
+					if (!target || !target.closest) return;
+					var link = target.closest('a');
+					if (!link) return;
+					var href = link.getAttribute('href') || '';
+						if (!href || href.charAt(0) === '#') {
+							// Special case: the featured story card should open the app.
+							if (link.classList && link.classList.contains('story__featured-wrapper')) {
+								e.preventDefault();
+								navigateTop(resolveUrl('./index.html?app=1#directory'));
+							}
+							return;
+						}
+
+					// When embedded as the landing iframe, always open internal HTML pages
+					// (login/app/privacy/terms/etc.) in the top-level page.
+					try {
+						var url = new URL(href, window.location.href);
+						var proto = String(url.protocol || '').toLowerCase();
+						if (proto === 'mailto:' || proto === 'tel:') return;
+						var path = String(url.pathname || '').toLowerCase();
+						if (path.endsWith('.html')) {
+							e.preventDefault();
+							navigateTop(url.toString());
+						}
+					} catch (e2) {
+						// ignore
+					}
+				}, true);
+			})();
+		</script>
+	</body>
+</html>

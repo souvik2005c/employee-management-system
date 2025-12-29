@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link rel="stylesheet" href="login.css?v=20251227">
+</head>
+<body>
+    <div class="container" id="authContainer">
+        <div class="curved-shape" aria-hidden="true"></div>
+        <div class="curved-shape2" aria-hidden="true"></div>
+
+        <div class="form-box Login">
+            <h2 class="animation" data-d="0" data-s="21">Login</h2>
+
+            <form id="loginForm" novalidate>
+                <div class="input-box animation" data-d="1" data-s="22">
+                    <input id="loginUser" name="user" type="text" autocomplete="username" required>
+                    <label for="loginUser">Employee ID</label>
+                    <box-icon type="solid" name="user" color="gray"></box-icon>
+                </div>
+
+                <div class="input-box animation" data-d="2" data-s="23">
+                    <input id="loginPin" name="pin" type="password" inputmode="numeric" autocomplete="current-password" required>
+                    <label for="loginPin">PIN</label>
+                    <box-icon name="lock-alt" type="solid" color="gray"></box-icon>
+                </div>
+
+                <div class="input-box animation" data-d="3" data-s="24">
+                    <select id="loginRole" class="role-select" aria-label="Login role">
+                        <option value="employee">Employee</option>
+                        <option value="hr">HR</option>
+                    </select>
+                </div>
+
+                <div class="input-box animation" data-d="4" data-s="25">
+                    <button class="btn" type="submit">Login</button>
+                </div>
+
+                <div class="message" id="loginMessage" aria-live="polite"></div>
+
+                <div class="regi-link animation" data-d="7" data-s="28">
+                    <p>Need an account? <br> <a href="#" class="SignUpLink">Create User Id</a></p>
+                </div>
+            </form>
+        </div>
+
+        <div class="info-content Login">
+            <h2 class="animation" data-d="0" data-s="20">WELCOME BACK!</h2>
+            <p class="animation" data-d="1" data-s="21">Login to access your dashboard.</p>
+        </div>
+
+        <div class="form-box Register">
+            <h2 class="animation" data-li="17" data-s="0">Create User Id</h2>
+            <form id="registerForm" novalidate>
+                <div class="input-box animation" data-li="18" data-s="1">
+                    <select id="regRole" class="role-select" aria-label="Register role">
+                        <option value="employee">Employee</option>
+                        <option value="hr">HR</option>
+                    </select>
+                </div>
+
+                <div class="input-box animation" data-li="18" data-s="1">
+                    <input id="regName" type="text" autocomplete="name" required>
+                    <label for="regName">User Name</label>
+                    <box-icon type="solid" name="user" color="gray"></box-icon>
+                </div>
+
+                <div class="input-box animation" data-li="19" data-s="2">
+                    <input id="regPin" type="password" inputmode="numeric" autocomplete="new-password" required>
+                    <label for="regPin">User  PIN</label>
+                    <box-icon name="lock-alt" type="solid" color="gray"></box-icon>
+                </div>
+
+                <div class="input-box animation" data-li="20" data-s="4">
+                    <button class="btn" type="submit">Create</button>
+                </div>
+
+                <div class="message" id="registerMessage" aria-live="polite"></div>
+
+                <div class="regi-link animation" data-li="21" data-s="5">
+                    <p>Already have an account? <br> <a href="#" class="SignInLink">Sign In</a></p>
+                </div>
+            </form>
+        </div>
+
+        <div class="info-content Register">
+            <h2 class="animation" data-li="17" data-s="0">ADMIN NOTE</h2>
+            <p class="animation" data-li="18" data-s="1">Create Employee or HR accounts here. Employees sign in using Employee ID + PIN. PIN must be 4+ digits.</p>
+        </div>
+    </div>
+
+    <script src="login-page.js?v=20251227"></script>
+    <script src="https://unpkg.com/boxicons@2.1.4/dist/boxicons.js"></script>
+</body>
+</html>

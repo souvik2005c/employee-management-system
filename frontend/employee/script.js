@@ -1,18 +1,35 @@
-// Derive API host from where the frontend is loaded.
-// - Local dev: prefer localhost:3000 (avoids 127.0.0.1 port conflicts in some setups)
-// - VS Code "Ports" / tunneling: hostnames often embed the port (e.g. <id>-5173.<domain>)
-//   In that case, the backend forwarded port is usually <id>-3000.<domain> (no :3000).
+function normalizeApiUrl(u) {
+    const s = String(u || '').trim();
+    return s.endsWith('/') ? s.slice(0, -1) : s;
+}
+
+// Derive API base URL.
+// Priority:
+// 1) window.__EMS_API_URL__ (set via frontend/config.js for Vercel/GitHub Pages)
+// 2) <meta name="ems-api-url" content="...">
+// 3) If UI is served from backend at /ui -> same origin
+// 4) Local dev / Live Server / VS Code tunnels heuristics
 const API_URL = (() => {
     try {
+        const explicit = (window && window.__EMS_API_URL__) || document.querySelector('meta[name="ems-api-url"]')?.content;
+        if (explicit) return normalizeApiUrl(explicit);
+
         const loc = window.location;
         const protocol = loc?.protocol || '';
         const hostname = (loc?.hostname || '').trim();
+        const port = String(loc?.port || '').trim();
+        const pathname = String(loc?.pathname || '');
 
         const isHttp = protocol.startsWith('http');
         if (!isHttp) return 'http://localhost:3000';
 
         const isLocalHost = !hostname || hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname === '[::1]';
         if (isLocalHost) return 'http://localhost:3000';
+
+        // If the frontend is being served by the backend at /ui, the API is same-origin.
+        if (pathname === '/ui' || pathname.startsWith('/ui/')) {
+            return normalizeApiUrl(loc.origin);
+        }
 
         // VS Code ports can appear in a couple common hostname shapes:
         // - Suffix form: <name>-5173.<domain>  => <name>-3000.<domain>
@@ -27,8 +44,13 @@ const API_URL = (() => {
             return `${protocol}//3000-${prefix[2]}`;
         }
 
-        // Default: same host, explicit backend port
-        return `${protocol}//${hostname}:3000`;
+        // If we're on a dev/static port (e.g. Live Server 5500), backend is usually :3000.
+        if (port && port !== '3000') {
+            return `${protocol}//${hostname}:3000`;
+        }
+
+        // Otherwise (Render/production/same-service), use same origin.
+        return normalizeApiUrl(loc.origin);
     } catch {}
 
     return 'http://localhost:3000';

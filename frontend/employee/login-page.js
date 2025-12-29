@@ -13,17 +13,31 @@ loginLink?.addEventListener('click', (e) => {
     container?.classList.remove('active');
 });
 
+function normalizeApiUrl(u) {
+    const s = String(u || '').trim();
+    return s.endsWith('/') ? s.slice(0, -1) : s;
+}
+
 const API_URL = (() => {
     try {
+        const explicit = (window && window.__EMS_API_URL__) || document.querySelector('meta[name="ems-api-url"]')?.content;
+        if (explicit) return normalizeApiUrl(explicit);
+
         const loc = window.location;
         const protocol = loc?.protocol || '';
         const hostname = (loc?.hostname || '').trim();
+        const port = String(loc?.port || '').trim();
+        const pathname = String(loc?.pathname || '');
 
         const isHttp = protocol.startsWith('http');
         if (!isHttp) return 'http://localhost:3000';
 
         const isLocalHost = !hostname || hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname === '[::1]';
         if (isLocalHost) return 'http://localhost:3000';
+
+        if (pathname === '/ui' || pathname.startsWith('/ui/')) {
+            return normalizeApiUrl(loc.origin);
+        }
 
         const suffix = hostname.match(/^(.*)-(\d+)(\..*)$/);
         if (suffix) {
@@ -35,7 +49,11 @@ const API_URL = (() => {
             return `${protocol}//3000-${prefix[2]}`;
         }
 
-        return `${protocol}//${hostname}:3000`;
+        if (port && port !== '3000') {
+            return `${protocol}//${hostname}:3000`;
+        }
+
+        return normalizeApiUrl(loc.origin);
     } catch {}
     return 'http://localhost:3000';
 })();
